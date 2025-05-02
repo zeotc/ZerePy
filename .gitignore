@@ -6,6 +6,8 @@ __pycache__/
 
 # CONFIG FILES
 .env
+.env.zeotc0
+.env.zeotc1
 twitter_config.json
 
 # AGENTS

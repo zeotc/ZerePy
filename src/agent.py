@@ -11,6 +11,8 @@ from src.action_handler import execute_action
 import src.actions.twitter_actions  
 import src.actions.echochamber_actions
 import src.actions.solana_actions
+import src.actions.sonic_actions
+import src.actions.zeotc_actions
 from datetime import datetime
 
 REQUIRED_FIELDS = ["name", "bio", "traits", "examples", "loop_delay", "config", "tasks"]
@@ -34,11 +36,17 @@ class ZerePyAgent:
             self.bio = agent_dict["bio"]
             self.traits = agent_dict["traits"]
             self.examples = agent_dict["examples"]
-            self.example_accounts = agent_dict["example_accounts"]
+            self.example_accounts = agent_dict.get("example_accounts", [])
             self.loop_delay = agent_dict["loop_delay"]
+            self.config = agent_dict["config"]
             self.connection_manager = ConnectionManager(agent_dict["config"])
-            self.use_time_based_weights = agent_dict["use_time_based_weights"]
-            self.time_based_multipliers = agent_dict["time_based_multipliers"]
+            
+            # Make these fields optional with defaults
+            self.use_time_based_weights = agent_dict.get("use_time_based_weights", False)
+            self.time_based_multipliers = agent_dict.get("time_based_multipliers", {
+                "tweet_night_multiplier": 0.4,
+                "engagement_day_multiplier": 1.5
+            })
 
             has_twitter_tasks = any("tweet" in task["name"] for task in agent_dict.get("tasks", []))
             
@@ -61,14 +69,31 @@ class ZerePyAgent:
 
             # Extract loop tasks
             self.tasks = agent_dict.get("tasks", [])
-            self.task_weights = [task.get("weight", 0) for task in self.tasks]
+            
+            # Handle both weight-based and interval-based task configurations
+            self.task_weights = []
+            for task in self.tasks:
+                if "weight" in task:
+                    self.task_weights.append(task["weight"])
+                elif "interval" in task:
+                    # Convert interval-based to weight-based (inverse relationship)
+                    # Lower interval = higher weight
+                    interval = task["interval"]
+                    weight = 100.0 / max(interval, 1)  # Prevent division by zero
+                    self.task_weights.append(weight)
+                else:
+                    # Default weight if neither is specified
+                    self.task_weights.append(1.0)
+                    
             self.logger = logging.getLogger("agent")
 
             # Set up empty agent state
             self.state = {}
 
         except Exception as e:
-            logger.error("Could not load ZerePy agent")
+            logger.error(f"Could not load ZerePy agent: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             raise e
 
     def _setup_llm_provider(self):
@@ -89,7 +114,12 @@ class ZerePyAgent:
         """Construct the system prompt from agent configuration"""
         if self._system_prompt is None:
             prompt_parts = []
-            prompt_parts.extend(self.bio)
+            
+            # Handle bio as string or list
+            if isinstance(self.bio, list):
+                prompt_parts.extend(self.bio)
+            else:
+                prompt_parts.append(self.bio)
 
             if self.traits:
                 prompt_parts.append("\nYour key traits are:")
@@ -100,6 +130,7 @@ class ZerePyAgent:
                 if self.examples:
                     prompt_parts.extend(f"- {example}" for example in self.examples)
 
+                # pull all tweets from example twitter accounts to include as post examples in our agent.
                 if self.example_accounts:
                     for example_account in self.example_accounts:
                         tweets = self.connection_manager.perform_action(
@@ -195,7 +226,7 @@ class ZerePyAgent:
                                 action_name="get-room-info",
                                 params={}
                             )
-
+                    
                     # CHOOSE AN ACTION
                     # TODO: Add agentic action selection
                     

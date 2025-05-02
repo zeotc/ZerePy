@@ -38,45 +38,91 @@ SONIC_SWAP_ABI = [
   }
 ]
 
-ERC20_ABI = [
+OTC_ABI = [
     {
-        "constant": True,
-        "inputs": [],
-        "name": "name",
-        "outputs": [{"name": "", "type": "string"}],
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [{"name": "", "type": "string"}],
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [],
-        "name": "decimals",
-        "outputs": [{"name": "", "type": "uint8"}],
-        "type": "function"
-    },
-    {
-        "constant": True,
-        "inputs": [{"name": "_owner", "type": "address"}],
-        "name": "balanceOf",
-        "outputs": [{"name": "balance", "type": "uint256"}],
-        "type": "function"
-    },
-    {
-        "constant": True,
         "inputs": [
-            {"name": "_owner", "type": "address"},
-            {"name": "_spender", "type": "address"}
+            {
+                "components": [
+                    {"internalType": "address", "name": "maker", "type": "address"},
+                    {"internalType": "uint256", "name": "amountHave", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amountWant", "type": "uint256"},
+                    {"internalType": "address", "name": "have", "type": "address"},
+                    {"internalType": "address", "name": "want", "type": "address"},
+                    {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+                    {"internalType": "uint256", "name": "index", "type": "uint256"}
+                ],
+                "internalType": "struct IOTC.Ask",
+                "name": "ask",
+                "type": "tuple"
+            },
+            {"internalType": "address", "name": "maker", "type": "address"}
         ],
-        "name": "allowance",
-        "outputs": [{"name": "", "type": "uint256"}],
+        "name": "makeAsk",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
+    {
+        "inputs": [],
+        "name": "getAllOpenAsks",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "address", "name": "maker", "type": "address"},
+                    {"internalType": "uint256", "name": "amountHave", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amountWant", "type": "uint256"},
+                    {"internalType": "address", "name": "have", "type": "address"},
+                    {"internalType": "address", "name": "want", "type": "address"},
+                    {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+                    {"internalType": "uint256", "name": "index", "type": "uint256"}
+                ],
+                "internalType": "struct IOTC.Ask[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "taker", "type": "address"},
+            {"internalType": "address", "name": "maker", "type": "address"},
+            {"internalType": "address", "name": "asset", "type": "address"},
+            {"internalType": "uint256", "name": "idx", "type": "uint256"}
+        ],
+        "name": "fillAsk",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "maker", "type": "address"},
+            {"internalType": "address", "name": "asset", "type": "address"},
+            {"internalType": "uint256", "name": "idx", "type": "uint256"}
+        ],
+        "name": "cancelOpenAsk",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "maker", "type": "address"},
+            {"internalType": "address", "name": "asset", "type": "address"},
+            {"internalType": "uint256", "name": "idx", "type": "uint256"}
+        ],
+        "name": "hasOpenAsk",
+        "outputs": [
+            {"internalType": "bool", "name": "", "type": "bool"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
+
+ERC20_ABI = [
     {
         "constant": False,
         "inputs": [
@@ -84,48 +130,57 @@ ERC20_ABI = [
             {"name": "_value", "type": "uint256"}
         ],
         "name": "approve",
-        "outputs": [{"name": "", "type": "bool"}],
+        "outputs": [
+            {"name": "", "type": "bool"}
+        ],
+        "payable": False,
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
-        "constant": False,
+        "constant": True,
         "inputs": [
-            {"name": "_to", "type": "address"},
-            {"name": "_value", "type": "uint256"}
+            {"name": "_owner", "type": "address"}
         ],
-        "name": "transfer",
-        "outputs": [{"name": "", "type": "bool"}],
+        "name": "balanceOf",
+        "outputs": [
+            {"name": "balance", "type": "uint256"}
+        ],
+        "payable": False,
+        "stateMutability": "view",
         "type": "function"
     },
     {
-        "constant": False,
-        "inputs": [
-            {"name": "_from", "type": "address"},
-            {"name": "_to", "type": "address"},
-            {"name": "_value", "type": "uint256"}
+        "constant": True,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [
+            {"name": "", "type": "uint8"}
         ],
-        "name": "transferFrom",
-        "outputs": [{"name": "", "type": "bool"}],
+        "payable": False,
+        "stateMutability": "view",
         "type": "function"
     },
     {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": "owner", "type": "address"},
-            {"indexed": True, "name": "spender", "type": "address"},
-            {"indexed": False, "name": "value", "type": "uint256"}
+        "constant": True,
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {"name": "", "type": "string"}
         ],
-        "name": "Approval",
-        "type": "event"
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
     },
     {
-        "anonymous": False,
-        "inputs": [
-            {"indexed": True, "name": "from", "type": "address"},
-            {"indexed": True, "name": "to", "type": "address"},
-            {"indexed": False, "name": "value", "type": "uint256"}
+        "constant": True,
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {"name": "", "type": "string"}
         ],
-        "name": "Transfer",
-        "type": "event"
+        "payable": False,
+        "stateMutability": "view",
+        "type": "function"
     }
 ]

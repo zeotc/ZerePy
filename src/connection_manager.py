@@ -22,6 +22,8 @@ from src.connections.together_connection import TogetherAIConnection
 from src.connections.evm_connection import EVMConnection
 from src.connections.perplexity_connection import PerplexityConnection
 from src.connections.monad_connection import MonadConnection
+from src.connections.zeotc_connection import ZeOTCConnection
+from src.connections.trading_behavior import TradingBehaviorConnection
 
 logger = logging.getLogger("connection_manager")
 
@@ -76,6 +78,10 @@ class ConnectionManager:
             return PerplexityConnection
         elif class_name == "monad":
             return MonadConnection
+        elif class_name == "zeotc":
+            return ZeOTCConnection
+        elif class_name == "trading_behavior":
+            return TradingBehaviorConnection
         return None
 
     def _register_connection(self, config_dic: Dict[str, Any]) -> None:
@@ -90,10 +96,16 @@ class ConnectionManager:
         try:
             name = config_dic["name"]
             connection_class = self._class_name_to_type(name)
+            if connection_class is None:
+                logger.warning(f"Unknown connection type: {name}")
+                return
+                
             connection = connection_class(config_dic)
             self.connections[name] = connection
         except Exception as e:
-            logging.error(f"Failed to initialize connection {name}: {e}")
+            logger.error(f"Failed to initialize connection {config_dic.get('name', 'unknown')}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
     def _check_connection(self, connection_string: str) -> bool:
         try:
@@ -170,21 +182,28 @@ class ConnectionManager:
             logging.error(f"\nAn error occurred: {e}")
 
     def perform_action(
-        self, connection_name: str, action_name: str, params: List[Any]
+        self, connection_name: str, action_name: str, params=None
     ) -> Optional[Any]:
         """Perform an action on a specific connection with given parameters"""
+        if params is None:
+            params = []
+            
         try:
+            if connection_name not in self.connections:
+                logger.error(f"Connection '{connection_name}' not found")
+                return None
+                
             connection = self.connections[connection_name]
 
             if not connection.is_configured():
-                logging.error(
-                    f"\nError: Connection '{connection_name}' is not configured"
+                logger.warning(
+                    f"Connection '{connection_name}' is not configured"
                 )
-                return None
+                # Continue anyway, since we've made configurations optional
 
             if action_name not in connection.actions:
-                logging.error(
-                    f"\nError: Unknown action '{action_name}' for connection '{connection_name}'"
+                logger.error(
+                    f"Unknown action '{action_name}' for connection '{connection_name}'"
                 )
                 return None
 
@@ -192,13 +211,17 @@ class ConnectionManager:
 
             # Convert list of params to kwargs dictionary, handling both required and optional params
             kwargs = {}
-            param_index = 0
-
-            # Add provided parameters up to the number provided
-            for i, param in enumerate(action.parameters):
-                if param_index < len(params):
-                    kwargs[param.name] = params[param_index]
-                    param_index += 1
+            
+            # Handle both list and dict params
+            if isinstance(params, dict):
+                kwargs = params
+            else:
+                param_index = 0
+                # Add provided parameters up to the number provided
+                for i, param in enumerate(action.parameters):
+                    if param_index < len(params):
+                        kwargs[param.name] = params[param_index]
+                        param_index += 1
 
             # Validate all required parameters are present
             missing_required = [
@@ -208,17 +231,19 @@ class ConnectionManager:
             ]
 
             if missing_required:
-                logging.error(
-                    f"\nError: Missing required parameters: {', '.join(missing_required)}"
+                logger.error(
+                    f"Missing required parameters: {', '.join(missing_required)}"
                 )
                 return None
 
             return connection.perform_action(action_name, kwargs)
 
         except Exception as e:
-            logging.error(
-                f"\nAn error occurred while trying action {action_name} for {connection_name} connection: {e}"
+            logger.error(
+                f"An error occurred while trying action {action_name} for {connection_name} connection: {e}"
             )
+            import traceback
+            logger.error(traceback.format_exc())
             return None
 
     def get_model_providers(self) -> List[str]:
@@ -226,5 +251,5 @@ class ConnectionManager:
         return [
             name
             for name, conn in self.connections.items()
-            if conn.is_configured() and getattr(conn, "is_llm_provider", lambda: False)
+            if conn.is_configured() and conn.is_llm_provider
         ]
