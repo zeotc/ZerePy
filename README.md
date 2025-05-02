@@ -46,6 +46,113 @@ https://replit.com/@blormdev/ZerePy?v=1
 2. Click the run button on top
 3. Voila! your CLI should be ready to use, you can jump to the configuration section
 
+## ZerePy Sonic/OTC Agent Setup (zeotc1)
+
+This section documents the production-ready setup for running a ZerePy agent focused on Sonic testnet and OTC trading, with conversational logging and automated deployment.
+
+### Overview
+- **Agent:** `zeotc1` (see `agents/zeotc1.json`)
+- **Focus:** Sonic testnet wallet, ERC20 gem tokens, OTC contract trading, and social activity (Twitter/X)
+- **Personality:** Chaotic, Gen-Z, female crypto degen (customizable via agent config)
+- **Productionization:** Docker, persistent storage, health checks, auto-start
+- **Conversational Logging:** All Sonic/OTC actions are logged as chat messages to a backend API
+
+---
+
+### 1. Agent Configuration
+
+The agent config (`agents/zeotc1.json`) defines:
+- **Bio, traits, and tweet examples** for personality
+- **Config:**
+  - `zeotc` and `sonic` (testnet)
+  - `trading_behavior` (controls OTC ask fill logic)
+  - `openai` (LLM for reasoning and tweet generation)
+- **Tasks:**
+  - `check-sonic-balance`, `check-gem-balances`, `get-all-otc-asks`, `auto-fill-otc-ask`, `auto-create-otc-ask`, `post-sonic-tweet`, `discuss-trading-opportunity`, `respond-to-trading-discussion`
+  - Each task has a configurable interval (seconds)
+
+**To customize:**
+- Edit `agents/zeotc1.json` to change traits, tweet style, task intervals, or trading logic.
+- Add or remove tasks as needed for your use case.
+
+---
+
+### 2. Sonic/OTC Actions
+
+All Sonic and OTC contract actions are implemented in:
+- `src/actions/sonic_actions.py` (balance checks, gem checks, OTC ask creation/filling, tweeting)
+- `src/actions/zeotc_actions.py` (trading discussion, LLM-driven chat, OTC deal scoring)
+
+**Key actions:**
+- `check-sonic-balance`, `check-gem-balances`, `make-otc-ask`, `fill-otc-ask`, `get-all-otc-asks`, `auto-create-otc-ask`, `auto-fill-otc-ask`, `post-sonic-tweet`
+- All actions are registered and can be scheduled as tasks in the agent config.
+
+---
+
+### 3. Conversational Logging to Backend API
+
+All Sonic/OTC actions are decorated with a logging decorator (`log_sonic_action` in `src/helpers/__init__.py`).
+- **What it does:**
+  - Captures all logs from the action
+  - Formats them as a chat message
+  - Sends them to the ZeOTC backend API (`https://server.zeotc.xyz/api/message/create`)
+- **Credentials:**
+  - Set `ZEOTC_CHAT_ID`, `ZEOTC_API_KEY`, and `ZEOTC_SECRET` in your `.env` file
+- **How to customize:**
+  - Edit the decorator or API call in `src/helpers/__init__.py` if you want to change the logging format or endpoint
+
+---
+
+### 4. Running in Production (Docker)
+
+A robust Docker setup is recommended for production:
+- **Dockerfile** and `docker-compose.yml` (see project root)
+- **Persistent storage:** Mount a volume for agent state and logs
+- **Health checks:** Included in Docker setup
+- **Auto-start:** Agent loads and starts automatically on container boot
+- **Startup script:** Automates CLI commands (`load-agent zeotc1` and `start`)
+
+**To run:**
+1. Build and start the container:
+   ```bash
+   docker-compose up -d --build
+   ```
+2. The agent will auto-load and start, running forever. Logs are persisted and can be monitored via Docker or your backend API.
+
+---
+
+### 5. Customizing Agent Behavior
+
+- **Personality:** Edit `bio`, `traits`, and `examples` in `agents/zeotc1.json`
+- **Tweet style:** Adjust `default_tweets` and `tweet_templates` in the agent config or in `post-sonic-tweet` action
+- **Trading logic:** Tweak `trading_behavior` config (e.g., `fill_threshold`, `random_fill_chance`)
+- **Task scheduling:** Change intervals or add/remove tasks in the agent config
+
+---
+
+### 6. Troubleshooting & Best Practices
+
+- **Logs not appearing in backend?**
+  - Check `.env` for correct API credentials
+  - Check Docker/container logs for errors
+  - Ensure the `log_sonic_action` decorator is applied to your custom actions
+- **Agent not starting?**
+  - Verify Docker volumes and permissions
+  - Check for missing dependencies in your Dockerfile
+- **Custom actions:**
+  - Register new actions in `src/actions/sonic_actions.py` or `src/actions/zeotc_actions.py`
+  - Add them to the agent's `tasks` array
+
+---
+
+### 7. References
+- **Agent config:** `agents/zeotc1.json`
+- **Sonic/OTC actions:** `src/actions/sonic_actions.py`, `src/actions/zeotc_actions.py`
+- **Logging:** `src/helpers/__init__.py` (`log_sonic_action`)
+- **Docker setup:** `Dockerfile`, `docker-compose.yml`, `start.sh` (if present)
+
+For further customization, see the rest of this README and the codebase.
+
 ## Requirements
 
 System:
